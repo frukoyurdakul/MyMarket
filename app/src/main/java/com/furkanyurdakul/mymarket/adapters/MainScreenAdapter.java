@@ -1,10 +1,12 @@
 package com.furkanyurdakul.mymarket.adapters;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -92,7 +94,7 @@ class ViewHolder extends RecyclerView.ViewHolder
         marketNameTextView, orderNameTextView, priceTextView,
         orderStatusTextView, priceTextView2, productDetailsTextView;
 
-    private final View arrowImageView, orderStatusView, orderStatusLayout;
+    private final View arrowImageView, orderStatusView, orderStatusLayout, mainLayout;
 
     public ViewHolder(@NonNull View itemView)
     {
@@ -108,18 +110,21 @@ class ViewHolder extends RecyclerView.ViewHolder
         arrowImageView = itemView.findViewById(R.id.arrowImageView);
         orderStatusView = itemView.findViewById(R.id.orderStatusView);
         orderStatusLayout = itemView.findViewById(R.id.orderStatusLayout);
+        mainLayout = itemView.findViewById(R.id.mainLayout);
     }
 
     void bind(MainScreenModel item)
     {
         // Simple setting data calls. Null checks are done in getters.
         dayTextView.setText(item.getDate());
-        monthTextView.setText(MONTHS[Integer.valueOf(item.getDate()) - 1]);
+        monthTextView.setText(MONTHS[Integer.valueOf(item.getMonth()) - 1]);
         marketNameTextView.setText(item.getMarketName());
         orderNameTextView.setText(item.getOrderName());
         priceTextView.setText(String.format(Locale.getDefault(),
                 PRICEFORMAT, item.getProductPrice()));
         orderStatusTextView.setText(item.getProductState());
+        orderStatusTextView.setTextColor(getStatusTextColorByState(orderStatusView.getContext(),
+                item.getProductState()));
         orderStatusView.setBackground(ContextCompat.getDrawable(orderStatusView.getContext(),
                 getOrderStatusBackgroundByState(item.getProductState())));
 
@@ -141,7 +146,7 @@ class ViewHolder extends RecyclerView.ViewHolder
         // Set the click listener to toggle product detail state.
         // The state will change at "switchAndGetOpened" and the new state
         // will determine whether the details should be visible or not.
-        itemView.setOnClickListener(v ->
+        mainLayout.setOnClickListener(v ->
         {
             boolean state = item.switchAndGetOpened();
             orderStatusLayout.setVisibility(state ? View.VISIBLE : View.GONE);
@@ -164,6 +169,20 @@ class ViewHolder extends RecyclerView.ViewHolder
                 return R.drawable.orderstatus_error_background;
             default:
                 return R.drawable.orderstatus_success_background;
+        }
+    }
+
+    @ColorInt
+    private int getStatusTextColorByState(Context context, String state)
+    {
+        switch (state)
+        {
+            case "Hazırlanıyor":
+                return ContextCompat.getColor(context, R.color.pendingTextColor);
+            case "Onay Bekliyor":
+                return ContextCompat.getColor(context, R.color.errorTextColor);
+            default:
+                return ContextCompat.getColor(context, R.color.successTextColor);
         }
     }
 }

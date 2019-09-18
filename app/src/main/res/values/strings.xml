@@ -1,5 +1,10 @@
 <resources>
-    <string name="app_name">My Market</string>
+    <string name="app_name">Marketim</string>
     <string name="my_orders">Siparişlerim</string>
     <string name="exit">Çıkış Yap</string>
+    <string name="user_name_hint">Kullanıcı Adı</string>
+    <string name="password_hint">Şifre</string>
+    <string name="app_name_capitalized">MARKETİM</string>
+    <string name="remember_me">Beni Hatırla</string>
+    <string name="login">Giriş</string>
 </resources>

@@ -9,7 +9,7 @@ import retrofit2.http.GET;
 
 public interface ConnectionInterface
 {
-    String BASE_URL = "http://kariyertechchallenge.mockable.io/";
+    String BASE_URL = "https://kariyertechchallenge.mockable.io/";
 
     @GET(".")
     Call<List<MainScreenModel>> getData();

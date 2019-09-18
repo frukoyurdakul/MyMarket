@@ -1,10 +1,8 @@
 package com.furkanyurdakul.mymarket.activities;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -25,19 +23,8 @@ import com.furkanyurdakul.mymarket.helpers.ThreadHelper;
 import com.furkanyurdakul.mymarket.models.MainScreenModel;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-
-import okhttp3.ConnectionSpec;
-import okhttp3.OkHttpClient;
-import okhttp3.TlsVersion;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -156,13 +143,8 @@ public class MainActivity extends BaseActivity
             // while initializing. The asynctask has to be started from the main thread.
             ThreadHelper.runOnBackgroundThread(() ->
             {
-                // TLS 1.2 needs to be forced in order for below API 21 devices to work
-                // on http requests. Https requests are normally fine.
-                // Enable for OkHttp.
-
                 Retrofit.Builder builder = new Retrofit.Builder()
                         .baseUrl(ConnectionInterface.BASE_URL)
-                        .client(getTls12Client(new OkHttpClient.Builder()).build())
                         .addConverterFactory(GsonConverterFactory.create());
 
                 // Create retrofit interface to fetch data.
@@ -204,123 +186,6 @@ public class MainActivity extends BaseActivity
         startActivity(new Intent(this, LoginActivity.class)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
         finish();
-    }
-
-    // The functions below are required for requesting to http requests in general.
-
-    public static OkHttpClient.Builder getTls12Client(OkHttpClient.Builder source)
-    {
-        source.followRedirects(true)
-                .followSslRedirects(true)
-                .retryOnConnectionFailure(true)
-                .cache(null);
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1)
-        {
-            List<ConnectionSpec> specsList = getSpecsBelowLollipopMR1(source);
-            if (specsList != null)
-                source.connectionSpecs(specsList);
-        }
-
-        return source;
-    }
-
-    /**
-     * Gets specs for devices below API 21.
-     */
-    private static List<ConnectionSpec> getSpecsBelowLollipopMR1(OkHttpClient.Builder okb)
-    {
-        try
-        {
-            SSLContext sc = SSLContext.getInstance("TLSv1.2");
-            sc.init(null, null, null);
-            okb.sslSocketFactory(new Tls12SocketFactory(sc.getSocketFactory()));
-
-            ConnectionSpec cs = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-                    .tlsVersions(TlsVersion.TLS_1_2)
-                    .build();
-
-            List<ConnectionSpec> specs = new ArrayList<>();
-            specs.add(cs);
-            specs.add(ConnectionSpec.COMPATIBLE_TLS);
-
-            return specs;
-
-        }
-        catch (Exception exc)
-        {
-            Log.e(TAG, "OkHttpTLSCompat Error while setting TLS 1.2", exc);
-            return null;
-        }
-    }
-
-    /**
-     * Enables TLS v1.2 when creating SSLSockets.
-     * <p/>
-     * For some reason, android supports TLS v1.2 from API 16, but enables it by default only from API 20.
-     *
-     * @link https://developer.android.com/reference/javax/net/ssl/SSLSocket.html
-     * @see SSLSocketFactory
-     */
-    private static class Tls12SocketFactory extends SSLSocketFactory
-    {
-        final SSLSocketFactory delegate;
-
-        Tls12SocketFactory(SSLSocketFactory base)
-        {
-            this.delegate = base;
-        }
-
-        @Override
-        public String[] getDefaultCipherSuites()
-        {
-            return delegate.getDefaultCipherSuites();
-        }
-
-        @Override
-        public String[] getSupportedCipherSuites()
-        {
-            return delegate.getSupportedCipherSuites();
-        }
-
-        @Override
-        public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException
-        {
-            return patch(delegate.createSocket(s, host, port, autoClose));
-        }
-
-        @Override
-        public Socket createSocket(String host, int port) throws IOException, UnknownHostException
-        {
-            return patch(delegate.createSocket(host, port));
-        }
-
-        @Override
-        public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException, UnknownHostException
-        {
-            return patch(delegate.createSocket(host, port, localHost, localPort));
-        }
-
-        @Override
-        public Socket createSocket(InetAddress host, int port) throws IOException
-        {
-            return patch(delegate.createSocket(host, port));
-        }
-
-        @Override
-        public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException
-        {
-            return patch(delegate.createSocket(address, port, localAddress, localPort));
-        }
-
-        private Socket patch(Socket s)
-        {
-            if (s instanceof SSLSocket)
-            {
-                ((SSLSocket) s).setEnabledProtocols(new String[]{"TLSv1.2"});
-            }
-            return s;
-        }
     }
 }
 

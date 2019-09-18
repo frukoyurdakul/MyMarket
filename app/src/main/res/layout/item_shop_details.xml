@@ -1,42 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:paddingBottom="30dp"
+    android:paddingTop="20dp"
     tools:ignore="all">
 
     <LinearLayout
         android:id="@+id/mainLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:background="?selectableItemBackground"
         android:clickable="true"
         android:focusable="true"
         android:importantForAccessibility="yes"
-        android:background="?selectableItemBackground">
+        android:orientation="horizontal">
 
         <LinearLayout
             android:layout_width="60dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/dayTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:textColor="#232323"
                 android:textSize="36dp"
                 tools:text="08"
-                android:textColor="#232323"/>
+                android:includeFontPadding="false"/>
 
             <TextView
                 android:id="@+id/monthTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:textColor="#232323"
                 tools:text="Ekim"
-                android:textColor="#232323"/>
+                android:includeFontPadding="false"/>
 
         </LinearLayout>
 
@@ -44,6 +48,7 @@
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:layout_marginRight="10dp"
+            android:layout_marginTop="5dp"
             android:background="#40000000" />
 
         <LinearLayout
@@ -61,20 +66,20 @@
                     android:id="@+id/arrowImageView"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
-                    android:layout_centerVertical="true"
                     android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
                     app:srcCompat="@drawable/ic_right_arrow" />
 
                 <TextView
                     android:id="@+id/marketNameTextView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="5dp"
+                    android:layout_toLeftOf="@id/arrowImageView"
                     android:textColor="#232323"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:layout_centerVertical="true"
-                    android:layout_toLeftOf="@id/arrowImageView"
-                    android:layout_marginRight="5dp"
                     tools:text="Market 1" />
 
             </RelativeLayout>
@@ -89,24 +94,24 @@
                     android:id="@+id/priceTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
                     android:textColor="#232323"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:layout_centerVertical="true"
-                    android:layout_alignParentRight="true"
                     tools:text="25 TL" />
 
                 <TextView
                     android:id="@+id/orderNameTextView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="#232323"
-                    android:textSize="13sp"
                     android:layout_centerVertical="true"
-                    android:layout_toLeftOf="@id/priceTextView"
                     android:layout_marginRight="5dp"
+                    android:layout_toLeftOf="@id/priceTextView"
                     android:ellipsize="end"
                     android:maxLines="1"
+                    android:textColor="#232323"
+                    android:textSize="13sp"
                     tools:text="Şampuan 250 ml" />
 
             </RelativeLayout>
@@ -115,28 +120,28 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
 
                 <View
                     android:id="@+id/orderStatusView"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:background="@drawable/orderstatus_error_background"/>
+                    android:background="@drawable/orderstatus_error_background" />
 
                 <TextView
                     android:id="@+id/orderStatusTextView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="#232323"
-                    android:textSize="13sp"
                     android:layout_gravity="center_vertical"
-                    android:layout_marginRight="10dp"
                     android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
                     android:ellipsize="end"
                     android:maxLines="1"
+                    android:textColor="#232323"
+                    android:textSize="13sp"
                     tools:text="Şampuan 250 ml"
-                    tools:textColor="@color/errorTextColor"/>
+                    tools:textColor="@color/errorTextColor" />
 
             </LinearLayout>
 
@@ -144,46 +149,54 @@
 
     </LinearLayout>
 
-    <FrameLayout
+    <LinearLayout
         android:id="@+id/orderStatusLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="10dp"
         android:layout_marginTop="20dp"
         android:background="#20000000"
-        android:visibility="visible">
+        android:padding="10dp"
+        android:visibility="visible"
+        android:orientation="vertical">
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="70dp">
+            android:layout_marginLeft="60dp">
 
             <TextView
                 android:id="@+id/priceTextView2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
                 android:textColor="#232323"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:layout_centerVertical="true"
-                android:layout_alignParentRight="true"
                 tools:text="25 TL" />
 
             <TextView
                 android:id="@+id/productDetailsTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#232323"
-                android:textSize="13sp"
                 android:layout_centerVertical="true"
-                android:layout_toLeftOf="@id/priceTextView2"
                 android:layout_marginRight="5dp"
+                android:layout_toLeftOf="@id/priceTextView2"
                 android:ellipsize="end"
                 android:maxLines="1"
+                android:textColor="#232323"
+                android:textSize="13sp"
                 tools:text="Şampuan 250 ml" />
 
         </RelativeLayout>
 
-    </FrameLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginLeft="60dp"
+            android:layout_marginTop="5dp"
+            android:background="#40000000" />
+
+    </LinearLayout>
 
 </LinearLayout>
