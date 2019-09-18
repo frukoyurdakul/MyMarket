@@ -7,4 +7,6 @@ As of September 18, Wednesday, 17:47 (UTC+3) the project is finished. Tested on 
 
 Retrofit is used to fetch and parse JSON data from a server, which I believe is the most frequently used in almost all applications.
 
+Recyclerview is used (Android Jetpack version) to display data more efficiently.
+
 Material design libraries are used to create designs that follows the latest guidelines.
