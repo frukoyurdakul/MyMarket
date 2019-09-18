@@ -1,0 +1,425 @@
+package com.furkanyurdakul.mymarket.activities;
+
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Build;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.util.Log;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.furkanyurdakul.mymarket.R;
+import com.furkanyurdakul.mymarket.abstracts.BaseActivity;
+import com.furkanyurdakul.mymarket.adapters.MainScreenAdapter;
+import com.furkanyurdakul.mymarket.connections.ConnectionInterface;
+import com.furkanyurdakul.mymarket.helpers.ThreadHelper;
+import com.furkanyurdakul.mymarket.models.MainScreenModel;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
+import okhttp3.ConnectionSpec;
+import okhttp3.OkHttpClient;
+import okhttp3.TlsVersion;
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+import static com.furkanyurdakul.mymarket.activities.SplashActivity.REMEMBER_ME_KEY;
+
+/**
+ * Contains main screen actions, which is displaying data over a JSON
+ * that is fetched from a specific URL.
+ */
+public class MainActivity extends BaseActivity
+{
+    private static final String TAG = "MainActivity";
+
+    private RecyclerView recyclerView;
+    private ProgressBar progressBar;
+
+    private final LoaderTask<List<MainScreenModel>> task = new LoaderTask<>(
+            new LoaderTask.LoaderResultListener<List<MainScreenModel>>()
+    {
+        @Override
+        public void onSuccessfulLoad(List<MainScreenModel> body)
+        {
+            // Here, process the body.
+            // The views has to be initialized at this point.
+            // Task is executed after views are found from the layout.
+            processData(body);
+        }
+
+        @Override
+        public void onFailure(int code, String message)
+        {
+            // Log the error. On other resume, it will continue trying to fetch data.
+            Log.e(TAG, "Error while fetching data. Code: " + code + ", message: " + message);
+        }
+    });
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        initViews();
+        loadDataIfNecessary();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        // An asynctask needs to be stopped if activity is going to be destroyed.
+        if (task.getStatus() == AsyncTask.Status.PENDING ||
+            task.getStatus() == AsyncTask.Status.RUNNING)
+                task.cancel(true);
+        super.onDestroy();
+    }
+
+    /**
+     * Initialize views. Contains settings views and adapter creations.
+     */
+    private void initViews()
+    {
+        recyclerView = findViewById(R.id.recyclerView);
+        progressBar = findViewById(R.id.progressBar);
+
+        // These two views do not need class defined variables as only
+        // click listeners are required.
+
+        findViewById(R.id.myOrdersButton).setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                // The click event does nothing but printing a toast.
+                Toast.makeText(getApplicationContext(),
+                        "Bir işlevi yok.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        findViewById(R.id.exitButton).setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                // Show a confirmation dialog to the user about
+                // exiting the app. Will redirect to Login screen after clicked.
+                //
+                // Wrap in try-catch as sometimes not wrapping can cause exceptions.
+                try
+                {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Çıkış")
+                            .setMessage("Çıkış yapmak istediğinize emin misiniz?")
+                            .setPositiveButton("İstiyorum", (dialog, which) ->
+                            {
+                                dialog.dismiss();
+                                exitAndOpenLoginScreen();
+                            })
+                            // Null listener just causes the dialog to dismiss.
+                            .setNegativeButton("İptal et", null)
+                            .show();
+                }
+                catch (Exception ignored){}
+            }
+        });
+    }
+
+    /**
+     * Loads the data asynchronously using {@link LoaderTask}.
+     */
+    private void loadDataIfNecessary()
+    {
+        if (!task.isExecutedSuccessfully())
+        {
+            // To prevent delays from Retrofit, switch between foreground and background threads
+            // while initializing. The asynctask has to be started from the main thread.
+            ThreadHelper.runOnBackgroundThread(() ->
+            {
+                // TLS 1.2 needs to be forced in order for below API 21 devices to work
+                // on http requests. Https requests are normally fine.
+                // Enable for OkHttp.
+
+                Retrofit.Builder builder = new Retrofit.Builder()
+                        .baseUrl(ConnectionInterface.BASE_URL)
+                        .client(getTls12Client(new OkHttpClient.Builder()).build())
+                        .addConverterFactory(GsonConverterFactory.create());
+
+                // Create retrofit interface to fetch data.
+                ConnectionInterface connectionInterface = builder.build().create(ConnectionInterface.class);
+
+                // After creating interface, switch to foreground thread to start execution
+                // of asynctask.
+                //
+                // Ignore unsafe check as we know there would be a compilation error
+                // if expected was different since it has to be same generic.
+                // It also throws exception if more than one call is sent to the task.
+                runOnUiThread(() -> task.execute(connectionInterface.getData()));
+            });
+        }
+    }
+
+    /**
+     * Processes the data that has been fetched from the server.
+     */
+    private void processData(List<MainScreenModel> body)
+    {
+        // Create the adapter and hide the progress bar.
+        // Linear layout manager is enough to display items here.
+
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(new MainScreenAdapter(body));
+        recyclerView.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
+    }
+
+    // Exits the main screen and switches to login screen.
+    private void exitAndOpenLoginScreen()
+    {
+        // Remove "Remember me" preference.
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .edit().putBoolean(REMEMBER_ME_KEY, false).apply();
+
+        // Switch to main screen by clearing the top activity which is itself.
+        startActivity(new Intent(this, LoginActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+        finish();
+    }
+
+    // The functions below are required for requesting to http requests in general.
+
+    public static OkHttpClient.Builder getTls12Client(OkHttpClient.Builder source)
+    {
+        source.followRedirects(true)
+                .followSslRedirects(true)
+                .retryOnConnectionFailure(true)
+                .cache(null);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1)
+        {
+            List<ConnectionSpec> specsList = getSpecsBelowLollipopMR1(source);
+            if (specsList != null)
+                source.connectionSpecs(specsList);
+        }
+
+        return source;
+    }
+
+    /**
+     * Gets specs for devices below API 21.
+     */
+    private static List<ConnectionSpec> getSpecsBelowLollipopMR1(OkHttpClient.Builder okb)
+    {
+        try
+        {
+            SSLContext sc = SSLContext.getInstance("TLSv1.2");
+            sc.init(null, null, null);
+            okb.sslSocketFactory(new Tls12SocketFactory(sc.getSocketFactory()));
+
+            ConnectionSpec cs = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                    .tlsVersions(TlsVersion.TLS_1_2)
+                    .build();
+
+            List<ConnectionSpec> specs = new ArrayList<>();
+            specs.add(cs);
+            specs.add(ConnectionSpec.COMPATIBLE_TLS);
+
+            return specs;
+
+        }
+        catch (Exception exc)
+        {
+            Log.e(TAG, "OkHttpTLSCompat Error while setting TLS 1.2", exc);
+            return null;
+        }
+    }
+
+    /**
+     * Enables TLS v1.2 when creating SSLSockets.
+     * <p/>
+     * For some reason, android supports TLS v1.2 from API 16, but enables it by default only from API 20.
+     *
+     * @link https://developer.android.com/reference/javax/net/ssl/SSLSocket.html
+     * @see SSLSocketFactory
+     */
+    private static class Tls12SocketFactory extends SSLSocketFactory
+    {
+        final SSLSocketFactory delegate;
+
+        Tls12SocketFactory(SSLSocketFactory base)
+        {
+            this.delegate = base;
+        }
+
+        @Override
+        public String[] getDefaultCipherSuites()
+        {
+            return delegate.getDefaultCipherSuites();
+        }
+
+        @Override
+        public String[] getSupportedCipherSuites()
+        {
+            return delegate.getSupportedCipherSuites();
+        }
+
+        @Override
+        public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException
+        {
+            return patch(delegate.createSocket(s, host, port, autoClose));
+        }
+
+        @Override
+        public Socket createSocket(String host, int port) throws IOException, UnknownHostException
+        {
+            return patch(delegate.createSocket(host, port));
+        }
+
+        @Override
+        public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException, UnknownHostException
+        {
+            return patch(delegate.createSocket(host, port, localHost, localPort));
+        }
+
+        @Override
+        public Socket createSocket(InetAddress host, int port) throws IOException
+        {
+            return patch(delegate.createSocket(host, port));
+        }
+
+        @Override
+        public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException
+        {
+            return patch(delegate.createSocket(address, port, localAddress, localPort));
+        }
+
+        private Socket patch(Socket s)
+        {
+            if (s instanceof SSLSocket)
+            {
+                ((SSLSocket) s).setEnabledProtocols(new String[]{"TLSv1.2"});
+            }
+            return s;
+        }
+    }
+}
+
+/**
+ * The asynchronous loader task for loading data remotely from an URL. Returns the data
+ * from {@link LoaderTask#onPostExecute(Response)}
+ *
+ * Written on the same file since the load only affects MainActivity.
+ */
+class LoaderTask<T> extends AsyncTask<Call<T>, Void, Response<T>>
+{
+    private static final String TAG = "LoaderTask";
+
+    @NonNull
+    private final LoaderResultListener<T> listener;
+
+    private boolean isExecutedSuccessfully = false;
+
+    public boolean isExecutedSuccessfully()
+    {
+        return isExecutedSuccessfully;
+    }
+
+    interface LoaderResultListener<U>
+    {
+        void onSuccessfulLoad(U body);
+        void onFailure(int code, String message);
+    }
+
+    LoaderTask(LoaderResultListener<T> listener)
+    {
+        if (listener == null)
+            throw new NullPointerException("Listener cannot be null.");
+        this.listener = listener;
+    }
+
+    @SafeVarargs
+    @Override
+    protected final Response<T> doInBackground(Call<T>... calls)
+    {
+        if (calls == null || calls.length == 0)
+            throw new NullPointerException("Parameters cannot be null.");
+        else if (calls.length > 1)
+            throw new UnsupportedOperationException("You can only execute 1 call with this library." +
+                    " Construct another object if another call should be executed.");
+        else
+        {
+            try
+            {
+                // Try to execute the call. Cannot return null even if the request
+                // fails with another code.
+
+                // Only execute the call if the task is not cancelled.
+                if (isCancelled())
+                    return null;
+
+                return calls[0].execute();
+            }
+            catch (IOException e)
+            {
+                // If an exception occurs, return null so onPostExecute can know about it.
+                Log.e(TAG, "Failed to execute call.", e);
+                return null;
+            }
+        }
+    }
+
+    // onPostExecute is only executed if the task is not canceled.
+    @Override
+    protected void onPostExecute(Response<T> response)
+    {
+        if (response != null)
+        {
+            // It means the request is not null. It can still be unsuccessful or the body may be null.
+            if (response.isSuccessful() && response.body() != null)
+            {
+                listener.onSuccessfulLoad(response.body());
+                isExecutedSuccessfully = true;
+            }
+            else if (response.errorBody() != null)
+            {
+                // If an error occurs, typically this field is filled. Get the message and log it.
+                try
+                {
+                    String text = response.errorBody().string();
+                    Log.e(TAG, "Error while getting response: " + text);
+                    listener.onFailure(response.code(), response.message());
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                    listener.onFailure(-2, "Error body is filled but " +
+                            "cannot be converted. Actual message: " + response.message());
+                }
+            }
+            else
+                listener.onFailure(-3, "Response is not successful and error body is null. Cause is unknown.");
+        }
+        else
+            listener.onFailure(-1, "An exception occured while executing the code.");
+    }
+}

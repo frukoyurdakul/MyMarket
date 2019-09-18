@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">My Market</string>
+    <string name="my_orders">Siparişlerim</string>
+    <string name="exit">Çıkış Yap</string>
+</resources>
